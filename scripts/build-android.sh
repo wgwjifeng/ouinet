@@ -299,6 +299,61 @@ fi
 }
 
 ######################################################################
+function maybe_install_gcrypt {
+    # Automake cross-compilation:
+    # https://www.gnu.org/software/automake/manual/html_node/Cross_002dCompilation.html
+
+    local HOST=arm-unknown-linux-androideabi
+
+    export CC=$NDK_TOOLCHAIN_DIR/bin/clang
+
+    ### Compile gpg_error ###
+
+    local GPG_ERROR_VERSION="1.32"
+    local GPG_ERROR_DIR=$DIR/libgpg-error-$GPG_ERROR_VERSION
+    local GPG_ERROR_PREFIX=$GPG_ERROR_DIR/out
+    local GPG_ERROR_TAR=libgpg-error-$GPG_ERROR_VERSION.tar.bz2
+    local GPG_ERROR_URL=https://www.gnupg.org/ftp/gcrypt/libgpg-error/$GPG_ERROR_TAR
+
+    if [ ! -d "$GPG_ERROR_DIR" ]; then
+        if [ ! -f "$GPG_ERROR_TAR" ]; then
+            wget $GPG_ERROR_URL
+        fi
+        tar xf $GPG_ERROR_TAR
+    fi
+
+    cd $GPG_ERROR_DIR
+
+    ./configure --host=$HOST --prefix=$GPG_ERROR_PREFIX
+
+    make -j`nproc` && make install
+
+    cd $DIR
+
+    ### Compile gcrypt ###
+
+    local GCRYPT_VERSION="1.8.3"
+    local GCRYPT_DIR=$DIR/libgcrypt-$GCRYPT_VERSION
+    local GCRYPT_TAR=libgcrypt-${GCRYPT_VERSION}.tar.bz2
+    local GCRYPT_URL=https://www.gnupg.org/ftp/gcrypt/libgcrypt/$GCRYPT_TAR
+
+    if [ ! -d "$GCRYPT_DIR" ]; then
+        if [ ! -f "$GCRYPT_TAR" ]; then
+            wget $GCRYPT_URL
+        fi
+        tar xf $GCRYPT_TAR
+    fi
+
+    cd $GCRYPT_DIR
+
+    ./configure --host=$HOST --with-libgpg-error-prefix=$GPG_ERROR_PREFIX
+
+    make -j`nproc`
+
+    cd $DIR
+}
+
+######################################################################
 function maybe_clone_ifaddrs {
 if [ ! -d "android-ifaddrs" ]; then
     # TODO: Still need to compile the .c file and make use of it.
@@ -424,6 +479,7 @@ if check_mode build; then
     maybe_install_ndk_toolchain
     maybe_install_gradle
     maybe_install_boost
+    maybe_install_gcrypt
     maybe_install_openssl
     maybe_clone_ifaddrs
     # TODO: miniupnp
