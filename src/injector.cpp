@@ -400,6 +400,8 @@ private:
 
         if (ec) return or_throw(yield, ec, move(ret.second));
 
+        ret.second.response = util::remove_ouinet_fields(move(ret.second.response));
+
         // Add an injection identifier header
         // to enable the client to track injection state.
         ret.second.response.set(http_::response_injection_id_hdr, ret.first);
